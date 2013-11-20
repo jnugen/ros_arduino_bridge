@@ -45,23 +45,38 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
-#define USE_BASE      // Enable the base controller code
-//#undef USE_BASE     // Disable the base controller code
+#define HAVE_MOTORS      // Enable the base motor code
+//#undef HAVE_MOTORS     // Disable the base motor code
 
-/* Define the motor controller and encoder library you are using */
-#ifdef USE_BASE
+/* Define the motor controller library you are using */
+#ifdef HAVE_MOTORS
    /* The Pololu VNH5019 dual motor driver shield */
-   #define POLOLU_VNH5019
+   //#define POLOLU_VNH5019
 
    /* The Pololu MC33926 dual motor driver shield */
    //#define POLOLU_MC33926
 
-   /* The RoboGaia encoder shield */
-   #define ROBOGAIA
+   /* The HRBC ClubBot motor driver */
+   #define HBRC_CLUBBOT
 #endif
+
+//#define HAVE_ENCODERS      // Enable the base encoder code
+#undef HAVE_ENCODERS     // Disable the base encoder code
+
+/* Define the encoder library you are using */
+#ifdef HAVE_ENCODERS
+   /* The RoboGaia encoder shield */
+   //#define ROBOGAIA
+#endif
+
+//#define USE_PID  // Enable use of PID controller code
+#undef USE_PID     // Disable use of PID controller code
 
 //#define USE_SERVOS  // Enable use of PWM servos as defined in servos.h
 #undef USE_SERVOS     // Disable use of PWM servos
+
+//#define USE_SONAR  // Enable use of sonar
+#undef USE_SONAR     // Disable use of sonar
 
 /* Serial port baud rate */
 #define BAUDRATE     57600
@@ -69,17 +84,16 @@
 /* Maximum PWM signal */
 #define MAX_PWM        255
 
-#if defined(ARDUINO) && ARDUINO >= 100
+/* Include main Arduino header file */
 #include "Arduino.h"
-#else
-#include "WProgram.h"
-#endif
 
 /* Include definition of serial commands */
 #include "commands.h"
 
 /* Sensor functions */
+#ifdef USE_SONAR
 #include "sensors.h"
+#endif
 
 /* Include servo support if required */
 #ifdef USE_SERVOS
@@ -87,12 +101,25 @@
    #include "servos.h"
 #endif
 
-#ifdef USE_BASE
+#ifdef HAVE_MOTORS
   /* Motor driver function definitions */
   #include "motor_driver.h"
 
+  /* Stop the robot if it hasn't received a movement command
+   in this number of milliseconds */
+  #define AUTO_STOP_INTERVAL 2000
+  long lastMotorCommand = AUTO_STOP_INTERVAL;
+#endif
+
+#ifdef HAVE_ENCODERS
   /* Encoder driver function definitions */
   #include "encoder_driver.h"
+#endif
+
+#ifdef USE_PID
+#if !(defined HAVE_MOTORS && defined HAVE_ENCODERS)
+  #error Both motor & encoder drivers must be selected to use PID!
+#endif
 
   /* PID parameters and functions */
   #include "diff_controller.h"
@@ -105,11 +132,6 @@
   
   /* Track the next time we make a PID calculation */
   unsigned long nextPID = PID_INTERVAL;
-
-  /* Stop the robot if it hasn't received a movement command
-   in this number of milliseconds */
-  #define AUTO_STOP_INTERVAL 2000
-  long lastMotorCommand = AUTO_STOP_INTERVAL;
 #endif
 
 /* Variable initialization */
@@ -176,9 +198,11 @@ int runCommand() {
     else if (arg2 == 1) pinMode(arg1, OUTPUT);
     Serial.println("OK");
     break;
+#ifdef USE_SONAR
   case PING:
     Serial.println(Ping(arg1));
     break;
+#endif
 #ifdef USE_SERVOS
   case SERVO_WRITE:
     servos[arg1].write(arg2);
@@ -188,21 +212,26 @@ int runCommand() {
     Serial.println(servos[arg1].read());
     break;
 #endif
-    
-#ifdef USE_BASE
+
+#ifdef HAVE_ENCODERS
   case READ_ENCODERS:
     Serial.print(readEncoder(LEFT));
     Serial.print(" ");
     Serial.println(readEncoder(RIGHT));
     break;
-   case RESET_ENCODERS:
+  case RESET_ENCODERS:
     resetEncoders();
+#ifdef USE_PID
     resetPID();
+#endif
     Serial.println("OK");
     break;
+#endif
+#ifdef HAVE_MOTORS
   case MOTOR_SPEEDS:
     /* Reset the auto stop timer */
     lastMotorCommand = millis();
+#ifdef USE_PID
     if (arg1 == 0 && arg2 == 0) {
       setMotorSpeeds(0, 0);
       moving = 0;
@@ -210,8 +239,13 @@ int runCommand() {
     else moving = 1;
     leftPID.TargetTicksPerFrame = arg1;
     rightPID.TargetTicksPerFrame = arg2;
+#else
+    setMotorSpeeds(arg1, arg2);
+#endif
     Serial.println("OK"); 
     break;
+#endif
+#ifdef USE_PID
   case UPDATE_PID:
     while ((str = strtok_r(p, ":", &p)) != '\0') {
        pid_args[i] = atoi(str);
@@ -235,8 +269,10 @@ void setup() {
   Serial.begin(BAUDRATE);
 
 // Initialize the motor controller if used */
-#ifdef USE_BASE
+#ifdef HAVE_MOTORS
   initMotorController();
+#endif
+#ifdef USE_PID
   resetPID();
 #endif
 
@@ -294,24 +330,21 @@ void loop() {
     }
   }
   
-// If we are using base control, run a PID calculation at the appropriate intervals
-#ifdef USE_BASE
+// If we are using PID, run a PID calculation at the appropriate intervals
+#ifdef USE_PID
   if (millis() > nextPID) {
     updatePID();
     nextPID += PID_INTERVAL;
   }
-  
+#endif
+#ifdef HAVE_MOTORS  
   // Check to see if we have exceeded the auto-stop interval
   if ((millis() - lastMotorCommand) > AUTO_STOP_INTERVAL) {;
     setMotorSpeeds(0, 0);
+#ifdef USE_PID
     moving = 0;
+#endif
   }
-
 #endif
 }
-
-
-
-
-
 

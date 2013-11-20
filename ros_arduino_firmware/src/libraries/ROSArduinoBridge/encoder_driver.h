@@ -1,5 +1,5 @@
 /* *************************************************************
-   Encoder driver function definitions - by James Nugen
+   Encoder driver function declarations - by James Nugen
    ************************************************************ */
    
 long readEncoder(int i);

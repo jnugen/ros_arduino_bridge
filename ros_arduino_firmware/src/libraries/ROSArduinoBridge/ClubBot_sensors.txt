@@ -1,0 +1,59 @@
+//  This example code is in the public domain.
+
+// Set *sonar_timeout* to a value a 200-300 uSec longer
+// that your table top threshold:
+
+static const int sonar_timeout = 800;
+ 
+// Pin definitions:
+static const unsigned char left_sonar_trigger = 7;
+static const unsigned char left_sonar_echo = 6;
+static const unsigned char right_sonar_trigger = 12;
+static const unsigned char right_sonar_echo = 11;
+
+// the init routine does the setup for the robot I/O pins
+void clubbot_sensorInit() {
+  // Set control pins for both left and right sonars:
+  pinMode(left_sonar_trigger, OUTPUT);
+  pinMode(left_sonar_echo, INPUT);
+  pinMode(right_sonar_trigger, OUTPUT);
+  pinMode(right_sonar_echo, INPUT);
+  
+  // Set all the pin values to predefined values:
+  digitalWrite(left_sonar_trigger, LOW);
+  digitalWrite(right_sonar_trigger, LOW);
+  digitalWrite(left_sonar_trigger, LOW);
+  digitalWrite(right_sonar_trigger, LOW);
+}
+
+// This routine will trigger a HC-SR04 sonar that has its
+// trigger pin attached to *sonar_trigger* and its echo
+// pin attached to *sonar_echo*.  If the echo response
+// takes longer than *timeout* microseconds, *timeout* is
+// returned.
+int clubbot_ping(int sonar_trigger, int sonar_echo, int timeout) {
+  int result = timeout;
+  if (!digitalRead(sonar_echo)) {
+    // *sonar_echo* is LOW, so we can safely trigger a 12uS
+    // trigger pulse:
+    digitalWrite(sonar_trigger, HIGH);
+    delayMicroseconds(12);
+    digitalWrite(sonar_trigger, LOW);
+    
+    // Time the resulting echo pulse.  If the resulting echo pulse
+    // is longer than *timeout*, *pulseIn* returns 0.
+    result = pulseIn(sonar_echo, HIGH, timeout);
+    
+    if (result == 0) {
+      // We timed out, so return *timeout*:
+      result = timeout;
+    }
+  } // else *sonar_echo* is still high from the previous trigger;
+    // return *timeout* when this occurs.
+  return result;
+}
+
+// the loop routine runs over and over again forever:
+//void loop() {
+//  int left_ping = ping(left_sonar_trigger, left_sonar_echo, sonar_timeout);
+//  int right_ping = ping(right_sonar_trigger, right_sonar_echo, sonar_timeout);

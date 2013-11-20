@@ -1,5 +1,5 @@
 /***************************************************************
-   Motor driver function definitions - by James Nugen
+   Motor driver function declarations - by James Nugen
    *************************************************************/
 
 void initMotorController();
