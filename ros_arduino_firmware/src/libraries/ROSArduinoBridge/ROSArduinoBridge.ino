@@ -45,44 +45,8 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
-#define HAVE_MOTORS      // Enable the base motor code
-//#undef HAVE_MOTORS     // Disable the base motor code
-
-/* Define the motor controller library you are using */
-#ifdef HAVE_MOTORS
-   /* The Pololu VNH5019 dual motor driver shield */
-   //#define POLOLU_VNH5019
-
-   /* The Pololu MC33926 dual motor driver shield */
-   //#define POLOLU_MC33926
-
-   /* The HRBC ClubBot motor driver */
-   #define HBRC_CLUBBOT
-#endif
-
-//#define HAVE_ENCODERS      // Enable the base encoder code
-#undef HAVE_ENCODERS     // Disable the base encoder code
-
-/* Define the encoder library you are using */
-#ifdef HAVE_ENCODERS
-   /* The RoboGaia encoder shield */
-   //#define ROBOGAIA
-#endif
-
-//#define USE_PID  // Enable use of PID controller code
-#undef USE_PID     // Disable use of PID controller code
-
-//#define USE_SERVOS  // Enable use of PWM servos as defined in servos.h
-#undef USE_SERVOS     // Disable use of PWM servos
-
-//#define USE_SONAR  // Enable use of sonar
-#undef USE_SONAR     // Disable use of sonar
-
-/* Serial port baud rate */
-#define BAUDRATE     57600
-
-/* Maximum PWM signal */
-#define MAX_PWM        255
+/* Include configuration settings */
+#include "config.h"
 
 /* Include main Arduino header file */
 #include "Arduino.h"
@@ -92,22 +56,21 @@
 
 /* Sensor functions */
 #ifdef USE_SONAR
-#include "sensors.h"
+   #include "sensors.h"
 #endif
 
 /* Include servo support if required */
 #ifdef USE_SERVOS
    #include <Servo.h>
-   #include "servos.h"
+
+   Servo servos[N_SERVOS];
+   byte servoPins[N_SERVOS] = SERVO_PINS;
 #endif
 
 #ifdef HAVE_MOTORS
   /* Motor driver function definitions */
   #include "motor_driver.h"
 
-  /* Stop the robot if it hasn't received a movement command
-   in this number of milliseconds */
-  #define AUTO_STOP_INTERVAL 2000
   long lastMotorCommand = AUTO_STOP_INTERVAL;
 #endif
 
@@ -123,9 +86,6 @@
 
   /* PID parameters and functions */
   #include "diff_controller.h"
-
-  /* Run the PID loop at 30 times per second */
-  #define PID_RATE           30     // Hz
 
   /* Convert the rate into an interval */
   const int PID_INTERVAL = 1000 / PID_RATE;
